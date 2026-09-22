@@ -4,7 +4,7 @@
 
 import pandas as pd                          # data manipulation
 import numpy as np                           # numerical operations
-from sklearn.linear_model import LinearRegression  # the ML model
+from sklearn.ensemble import GradientBoostingRegressor  # the ML model
 from sklearn.model_selection import train_test_split  # split data for training and testing
 from sklearn.preprocessing import StandardScaler     # normalize features
 import joblib                                # save and load the trained model
@@ -94,34 +94,34 @@ print(f"Market value range: €{df['market_value_in_eur'].min():,.0f} to €{df[
 
 print("Training model...")
 
-# features — what we feed into the model
 features = ['total_goals', 'total_assists', 'total_minutes', 'total_appearances', 'age', 'position_num']
 X = df[features]
 
-# target — what we want to predict
-y = df['market_value_in_eur']
+# log transform the target — compresses the massive value range
+# makes linear regression work much better for price prediction
+y = np.log1p(df['market_value_in_eur'])          # log1p = log(1 + x) — handles zeros safely
 
-# split 80% training, 20% testing
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# scale features — puts all numbers on the same scale so no feature dominates
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)   # fit on training data only
-X_test_scaled = scaler.transform(X_test)          # transform test data with same scaler
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
-# train the model
-model = LinearRegression()
+model = GradientBoostingRegressor(
+    n_estimators=300,      # number of trees — more trees = more accurate but slower
+    learning_rate=0.05,    # how much each tree corrects the previous — smaller = more careful
+    max_depth=5,           # how deep each tree goes — deeper = more complex patterns
+    random_state=42        # reproducibility — same result every time
+)
 model.fit(X_train_scaled, y_train)
 
-# evaluate — R² score: 1.0 = perfect, 0.0 = random, negative = worse than random
 score = model.score(X_test_scaled, y_test)
 print(f"Model R² score: {score:.3f}")
 
-# show feature importance — which stats matter most
 feature_importance = pd.DataFrame({
     'feature': features,
-    'coefficient': model.coef_
-}).sort_values('coefficient', ascending=False)
+    'importance': model.feature_importances_    # gradient boosting uses feature_importances_ not coef_
+}).sort_values('importance', ascending=False)
 print("\nFeature importance:")
 print(feature_importance)
 

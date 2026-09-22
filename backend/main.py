@@ -94,8 +94,9 @@ def predict_value(player_id: int):
     features_scaled = scaler.transform(features)
 
     # predict
-    predicted_value = model.predict(features_scaled)[0]
-    predicted_value = max(0, predicted_value)  # no negative values
+    predicted_log = model.predict(features_scaled)[0]
+    predicted_value = np.expm1(predicted_log)   # reverse the log transform
+    predicted_value = max(0, predicted_value)   # no negative values
 
     actual_value = player['market_value_in_eur']
 
