@@ -95,8 +95,10 @@ def predict_value(player_id: int):
 
     # predict
     predicted_log = model.predict(features_scaled)[0]
-    predicted_value = np.expm1(predicted_log)   # reverse the log transform
-    predicted_value = max(0, predicted_value)   # no negative values
+    predicted_log = min(predicted_log, 25)             # cap to prevent overflow
+    predicted_value = np.expm1(predicted_log)          # reverse log transform
+    predicted_value = max(0, predicted_value)          # no negative values
+    predicted_value = min(predicted_value, 500_000_000)  # cap at €500M
 
     actual_value = player['market_value_in_eur']
 
