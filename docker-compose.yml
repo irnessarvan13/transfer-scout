@@ -1,0 +1,31 @@
+# docker-compose.yml — defines all containers for Transfer Scout
+# run with: docker-compose up --build
+
+services:
+
+  # FastAPI backend
+  backend:
+    build:
+      context: .                         # build from root directory
+      dockerfile: backend/Dockerfile     # use backend Dockerfile
+    ports:
+      - "8001:8000"                      # host port 8001 → container port 8000 (avoid conflict with PitchIQ)
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}    # reads from .env file
+    volumes:
+      - .:/app                           # mount code so changes reflect immediately
+
+  # React frontend
+  frontend:
+    build:
+      context: ./frontend                # build from frontend directory
+      dockerfile: Dockerfile             # use frontend Dockerfile
+    ports:
+      - "3000:3000"                      # host port 3000 → container port 3000
+    environment:
+      VITE_API_URL: http://backend:8000  # points to backend container
+    depends_on:
+      - backend                          # wait for backend to start first
+    volumes:
+      - ./frontend:/app                  # mount code so changes reflect immediately
+      - /app/node_modules                # don't override node_modules with local
