@@ -506,3 +506,39 @@ body {
     text-align: center;
   }
 }
+
+/* ─────────────────────────────────────────────
+   AI SCOUT REPORT
+   ───────────────────────────────────────────── */
+
+.scout-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.05));
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.scout-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.scout-icon {
+  font-size: 18px;
+}
+
+.scout-header h3 {
+  font-size: 11px;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.scout-text {
+  font-size: 14px;
+  color: #d1d5db;
+  line-height: 1.8;
+  font-style: italic;
+}

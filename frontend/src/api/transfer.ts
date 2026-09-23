@@ -57,3 +57,9 @@ export async function predictValue(playerId: number): Promise<PredictionResponse
   const response = await axios.get(`${API_BASE}/predict/${playerId}`)
   return response.data
 }
+
+// get AI scout report for a player
+export async function getScoutReport(playerId: number): Promise<string> {
+  const response = await axios.get(`${API_BASE}/scout-report/${playerId}`)
+  return response.data.report
+}

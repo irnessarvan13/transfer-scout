@@ -8,6 +8,14 @@ import pandas as pd                          # data manipulation
 import joblib                                # load saved model
 import os                                    # file paths
 import numpy as np                           # numerical operations
+import anthropic                          # Claude API
+import os                                 # environment variables
+from dotenv import load_dotenv            # reads .env file
+
+
+load_dotenv()       # load .env file
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 app = FastAPI()
 
@@ -145,3 +153,75 @@ def predict_value(player_id: int):
         },
         "similar_players": similar
     }
+
+
+# ─────────────────────────────────────────────
+# CLAUDE AI SCOUT REPORT
+# ─────────────────────────────────────────────
+
+@app.get("/scout-report/{player_id}")
+def scout_report(player_id: int):
+    # find the player
+    player = df[df['player_id'] == player_id]
+
+    if player.empty:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    player = player.iloc[0]
+
+    # get predicted value
+    features = [[
+        player['total_goals'],
+        player['total_assists'],
+        player['total_minutes'],
+        player['total_appearances'],
+        player['age'],
+        player['position_num']
+    ]]
+    features_scaled = scaler.transform(features)
+    predicted_log = model.predict(features_scaled)[0]
+    predicted_log = min(predicted_log, 25)
+    predicted_value = np.expm1(predicted_log)
+    predicted_value = max(0, min(predicted_value, 500_000_000))
+
+    actual_value = player['market_value_in_eur']
+    difference = predicted_value - actual_value
+
+    if difference > 0:
+        verdict = f"undervalued by €{abs(difference):,.0f}"
+    else:
+        verdict = f"overvalued by €{abs(difference):,.0f}"
+
+    # build prompt with real player data
+    prompt = f"""You are an elite football scout writing a professional scouting report.
+
+Player: {player['name']}
+Club: {player['current_club_name']}
+Position: {player['position']}
+Age: {round(player['age'], 1)}
+Nationality: {player['country_of_citizenship']}
+
+Last 3 seasons statistics:
+- Goals: {int(player['total_goals'])}
+- Assists: {int(player['total_assists'])}
+- Minutes played: {int(player['total_minutes'])}
+- Appearances: {int(player['total_appearances'])}
+
+ML Model assessment:
+- Predicted market value: €{predicted_value:,.0f}
+- Actual Transfermarkt value: €{actual_value:,.0f}
+- Verdict: {verdict}
+
+Write a 3-4 sentence professional scout report analyzing this player. 
+mention their statistical output, what it means for their value, and one key insight.
+Be specific, use the numbers, sound like a real football scout.
+Do not use bullet points. Write in flowing prose. Keep it under 80 words."""
+
+    # call Claude API
+    message = claude_client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=200,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return {"report": message.content[0].text}

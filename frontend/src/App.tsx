@@ -6,7 +6,7 @@ App.tsx — Transfer Scout main component
 */
 
 import { useState, useEffect, useRef } from 'react'
-import { searchPlayers, predictValue } from './api/transfer'
+import { searchPlayers, predictValue, getScoutReport } from './api/transfer'
 import type { Player, PredictionResponse } from './api/transfer'
 import './App.css'
 
@@ -44,6 +44,7 @@ function App() {
   const [results, setResults] = useState<Player[]>([])           // search dropdown results
   const [loading, setLoading] = useState(false)                  // search loading state
   const [predicting, setPredicting] = useState(false)            // prediction loading state
+  const [scoutReport, setScoutReport] = useState<string | null>(null)  // Claude AI scout report
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null)  // prediction result
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)      // selected player
   const [showDropdown, setShowDropdown] = useState(false)        // show/hide dropdown
@@ -74,16 +75,21 @@ function App() {
   }, [query])
 
   // called when user clicks a player from dropdown
-  async function handleSelectPlayer(player: Player) {
+async function handleSelectPlayer(player: Player) {
     setSelectedPlayer(player)
     setShowDropdown(false)
     setQuery(player.name)
     setPredicting(true)
     setPrediction(null)
+    setScoutReport(null)                                   // reset previous report
 
     try {
-      const result = await predictValue(player.player_id)
+      const [result, report] = await Promise.all([
+        predictValue(player.player_id),                    // fetch prediction
+        getScoutReport(player.player_id)                   // fetch scout report simultaneously
+      ])
       setPrediction(result)
+      setScoutReport(report)
     } catch {
       console.error('Prediction failed')
     } finally {
@@ -98,6 +104,7 @@ function App() {
     setPrediction(null)
     setSelectedPlayer(null)
     setShowDropdown(false)
+    setScoutReport(null)                               // reset scout report
   }
 
   return (
@@ -218,6 +225,17 @@ function App() {
               </div>
             </div>
           </div>
+
+          {/* AI Scout Report */}
+          {scoutReport && (
+            <div className="scout-card card">
+              <div className="scout-header">
+                <span className="scout-icon">🤖</span>
+                <h3>AI Scout Report</h3>
+              </div>
+              <p className="scout-text">{scoutReport}</p>
+            </div>
+          )}
 
           {/* Similar Players */}
           <div className="similar-card card">
